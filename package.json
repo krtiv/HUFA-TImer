@@ -1,0 +1,46 @@
+{
+  "name": "hufa-timer",
+  "productName": "HUFA Timer",
+  "version": "0.1.0",
+  "description": "A modern offline desktop countdown timer.",
+  "main": "main.js",
+  "author": "Tales by HUFA",
+  "license": "MIT",
+
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+
+  "devDependencies": {
+    "electron": "^37.2.0",
+    "electron-builder": "^26.0.12"
+  },
+
+  "build": {
+    "appId": "com.hufa.timer",
+    "productName": "HUFA Timer",
+
+    "directories": {
+      "output": "dist"
+    },
+
+    "files": [
+      "**/*",
+      "!dist/*",
+      "!node_modules/.cache/*"
+    ],
+
+    "win": {
+      "target": "nsis",
+       "icon": "assets/icon.ico"
+    },
+
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

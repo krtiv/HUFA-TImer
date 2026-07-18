@@ -1,0 +1,566 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html,
+body{
+    margin:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:transparent;
+}
+
+.scene {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:transparent;
+    padding: 0;
+    overflow: hidden;
+}
+
+.widget {
+  position: relative;
+  width: 380px;
+  height: 100px;
+}
+
+/* Main pill body */
+.pill-body {
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px 0 18px;
+  gap: 14px;
+  transition: background 0.4s;
+  overflow: hidden;
+
+  /* Allow dragging the frameless Electron window */
+  -webkit-app-region: drag;
+}
+
+/* Notch cut on top-right */
+.pill-body::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 28px;
+  height: 28px;
+
+  /* Make the notch transparent */
+  background: transparent;
+
+  border-bottom-left-radius: 14px;
+}
+
+.left-icon,
+.close-btn,
+.display-box,
+.vol-col,
+.time-input {
+    -webkit-app-region: no-drag;
+}
+
+/* State backgrounds */
+.state-set  .pill-body { background: linear-gradient(145deg, #5c4ee8 0%, #3a28c8 40%, #2a1da0 100%); }
+.state-run  .pill-body { background: linear-gradient(145deg, #e03030 0%, #b81818 40%, #8a0e0e 100%); }
+.state-done .pill-body { background: linear-gradient(145deg, #1db864 0%, #0e9a4e 40%, #077038 100%); }
+
+/* Left icon */
+.left-icon {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: none;
+  border: none;
+  outline: none;
+  padding: 0;
+  position: relative;
+  z-index: 2;
+}
+.left-icon svg { width: 48px; height: 48px; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.35)); }
+.left-icon:active { transform: scale(0.93); }
+
+/* Display box */
+.display-box {
+  flex: 1;
+  height: 70px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  cursor: text;
+  transition: background 0.4s, box-shadow 0.4s;
+}
+.state-set  .display-box { background: linear-gradient(160deg, #2d22a8 0%, #1e1580 100%); box-shadow: inset 0 2px 8px rgba(0,0,0,0.5), inset 0 -1px 2px rgba(255,255,255,0.08); }
+.state-run  .display-box { background: linear-gradient(160deg, #921010 0%, #6e0a0a 100%); box-shadow: inset 0 2px 8px rgba(0,0,0,0.5), inset 0 -1px 2px rgba(255,255,255,0.08); }
+.state-done .display-box { background: linear-gradient(160deg, #096e38 0%, #065028 100%); box-shadow: inset 0 2px 8px rgba(0,0,0,0.5), inset 0 -1px 2px rgba(255,255,255,0.08); }
+
+/* Border on display box */
+.state-set  .display-box { border: 1.5px solid #1a10a0; }
+.state-run  .display-box { border: 1.5px solid #6a0808; }
+.state-done .display-box { border: 1.5px solid #055030; }
+
+.time-num {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 38px;
+  font-weight: 800;
+  color: white;
+  letter-spacing: 1px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.time-unit {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 22px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.85);
+  margin-left: 6px;
+  line-height: 1;
+}
+
+.time-input {
+  background: transparent; border: none; outline: none;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 38px; font-weight: 800;
+  color: white; letter-spacing: 2px;
+  font-variant-numeric: tabular-nums;
+  width: 90px; text-align: center;
+  caret-color: rgba(255,255,255,0.9);
+}
+.time-input::selection { background: rgba(255,255,255,0.25); }
+
+.times-up-text {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 30px; font-weight: 800;
+  color: white; letter-spacing: 0.5px;
+}
+
+/* Volume bars — right side */
+.vol-col {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  padding-right: 22px;
+  position: relative;
+  z-index: 2;
+  cursor: pointer;
+  user-select: none;
+}
+
+.vol-bar {
+  height: 6px;
+  border-radius: 3px;
+  transition: background 0.3s, opacity 0.3s;
+}
+.vol-bar:nth-child(1) { width: 32px; }
+.vol-bar:nth-child(2) { width: 26px; }
+.vol-bar:nth-child(3) { width: 20px; }
+.vol-bar:nth-child(4) { width: 14px; }
+
+/* Blue state bars */
+.state-set .vol-bar { background: rgba(255,255,255,0.18); }
+.state-set .vol-bar.vol-active { background: #00e5ff; }
+
+/* Red state bars */
+.state-run .vol-bar { background: rgba(255,255,255,0.18); }
+.state-run .vol-bar.vol-active { background: rgba(255,140,140,0.9); }
+
+/* Green state bars */
+.state-done .vol-bar { background: rgba(255,255,255,0.18); }
+.state-done .vol-bar.vol-active { background: #00ff99; }
+
+/* Close X — notch area */
+.close-btn{
+    position:absolute;
+
+    top:4px;
+    right:8px;
+
+    width:22px;
+    height:22px;
+
+    border:none;
+    border-radius:6px;
+
+    background:transparent;
+
+    color:rgba(255,255,255,.65);
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    cursor:pointer;
+
+    z-index:20;
+
+    -webkit-app-region:no-drag;
+
+    transition:
+        background .18s ease,
+        color .18s ease;
+}
+
+.close-btn:hover{
+
+    background:rgba(255,255,255,.08);
+
+    color:#fff;
+}
+
+.hint {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 11px; color: rgba(255,255,255,0.3);
+  text-align: center; margin-top: 12px;
+  letter-spacing: 0.04em;
+}
+
+.closed-msg {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  color: rgba(255,255,255,0.3);
+  font-size: 13px; text-align: center;
+}
+
+#playIcon,
+#resetIcon {
+    transition: opacity .2s ease;
+}
+
+.left-icon:hover {
+    transform: scale(1.05);
+}
+
+.left-icon:active {
+    transform: scale(0.95);
+}
+
+.pin-btn{
+
+    position:absolute;
+
+    top:4px;
+    right:34px;
+
+    width:20px;
+    height:20px;
+
+    border:none;
+
+    background:transparent;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    cursor:pointer;
+
+    z-index:20;
+
+    -webkit-app-region:no-drag;
+
+    transition:.2s;
+}
+
+.pin-btn:hover{
+
+    background:rgba(255,255,255,.08);
+
+}
+
+.pin-btn svg{
+
+    pointer-events:none;
+
+}
+
+</style>
+
+<div class="scene" id="scene">
+  <div style="display:flex;flex-direction:column;align-items:center;" id="timerWrap">
+
+    <div class="widget state-set" id="widget">
+      <div class="pill-body" id="pillBody">
+
+        <!-- Left icon button -->
+        <button class="left-icon" id="leftBtn" onclick="handleLeft()" aria-label="Start">
+          <svg id="leftSvg" viewBox="0 0 48 48" fill="none">
+            <!-- Play triangle -->
+            <polygon id="playIcon" points="14,8 40,24 14,40" fill="white"/>
+            <!-- Reset icon (hidden by default) -->
+            <g id="resetIcon" style="display:none">
+    <path
+        d="M42.7 16C39.894 10.08 33.774 6 26.7 6C24.3362 6 21.9955 6.46558 19.8116 7.37017C17.6278 8.27475 15.6435 9.60062 13.972 11.2721C12.3006 12.9435 10.9747 14.9278 10.0701 17.1117C9.16554 19.2956 8.69995 21.6362 8.69995 24C8.69995 26.3638 9.16554 28.7044 10.0701 30.8883C10.9747 33.0722 12.3006 35.0565 13.972 36.7279C15.6435 38.3994 17.6278 39.7252 19.8116 40.6298C21.9955 41.5344 24.3362 42 26.7 42C31.4738 42 36.0522 40.1036 39.4279 36.7279C42.8035 33.3523 44.7 28.7739 44.7 24M44.7 6V18H32.7"
+        stroke="white"
+        stroke-width="4"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        fill="none"/>
+</g>
+          </svg>
+        </button>
+
+        <!-- Center display -->
+        <div class="display-box" id="displayBox" onclick="focusInput()">
+          <!-- Set state: editable -->
+          <div id="setDisplay" style="display:flex;align-items:baseline;">
+            <input class="time-input" id="timeInput" value="25"
+              maxlength="2" aria-label="Minutes"
+              onfocus="onFocus()" onblur="onBlur()"
+              oninput="onInput(this)" onkeydown="onKeyDown(event)"/>
+            <span class="time-unit" id="unitLabel">min</span>
+          </div>
+          <!-- Run state: countdown -->
+          <div id="runDisplay" style="display:none;">
+            <span class="time-num" id="countText">25:00</span>
+          </div>
+          <!-- Done state -->
+          <div id="doneDisplay" style="display:none;">
+            <span class="times-up-text">Times Up!</span>
+          </div>
+        </div>
+
+        <!-- Volume bars -->
+        <div class="vol-col" id="volCol">
+          <div class="vol-bar" data-lvl="1" onclick="setVol(1)"></div>
+          <div class="vol-bar" data-lvl="2" onclick="setVol(2)"></div>
+          <div class="vol-bar" data-lvl="3" onclick="setVol(3)"></div>
+          <div class="vol-bar" data-lvl="4" onclick="setVol(4)"></div>
+        </div>
+
+      </div>
+      <button id="pinBtn" class="pin-btn" title="Always on Top">
+
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+
+<path
+id="pinIcon"
+
+d="M9 3H15
+L14 8
+L18 12
+H13
+V21
+L11 19
+V12
+H6
+L10 8
+Z"
+
+stroke="rgba(255,255,255,.45)"
+stroke-width="1.8"
+stroke-linecap="round"
+stroke-linejoin="round"/>
+
+</svg>
+
+</button>
+      <!-- X button in notch -->
+      <button
+         id="closeBtn"
+         class="close-btn"
+         title="Close Timer">
+         ✕
+        </button>
+    </div>
+
+    
+  </div>
+
+  
+</div>
+
+<script>
+let mins = 25;
+let remaining = 0;
+let totalSecs = 0;
+let running = false;
+let done = false;
+let ticker = null;
+let volume = 3; // bottom 2 lit by default (index 3 and 4 from top = bars 3,4)
+
+const widget    = document.getElementById('widget');
+const playIcon  = document.getElementById('playIcon');
+const resetIcon = document.getElementById('resetIcon');
+const timeInput = document.getElementById('timeInput');
+const unitLabel = document.getElementById('unitLabel');
+const setDisp   = document.getElementById('setDisplay');
+const runDisp   = document.getElementById('runDisplay');
+const doneDisp  = document.getElementById('doneDisplay');
+const countText = document.getElementById('countText');
+const timerWrap = document.getElementById('timerWrap');
+const closedMsg = document.getElementById('closedMsg');
+const bars      = document.querySelectorAll('.vol-bar');
+
+const pinBtn = document.getElementById("pinBtn");
+const pinIcon = document.getElementById("pinIcon");
+
+pinBtn.addEventListener("click", async () => {
+
+    const pinned = await window.electronAPI.toggleAlwaysOnTop();
+
+    pinIcon.setAttribute(
+        "stroke",
+        pinned
+            ? "white"
+            : "rgba(255,255,255,.45)"
+    );
+
+});
+
+const closeBtn = document.getElementById("closeBtn");
+
+closeBtn.addEventListener("click", () => {
+    window.electronAPI.closeWindow();
+});
+
+function pad(n){ return String(n).padStart(2,'0'); }
+
+// volume: 1=only bottom bar lit, 4=all lit
+// bars are ordered top-to-bottom in DOM (data-lvl 1=top/longest, 4=bottom/shortest)
+// "active" means lit — bottom bars light first
+function renderVol(){
+  bars.forEach(b => {
+    const lvl = parseInt(b.dataset.lvl);
+    // bottom (lvl 4) lights first, then 3, 2, 1
+    const threshold = 5 - lvl; // lvl4→1, lvl3→2, lvl2→3, lvl1→4
+    b.classList.toggle('vol-active', volume >= threshold);
+  });
+}
+
+function setVol(lvl){
+  // clicking a bar: map top-bar click to low volume, bottom to high
+  const mapped = 5 - lvl; // invert: clicking top (lvl1) = volume 4, bottom (lvl4) = volume 1
+  volume = mapped < 1 ? 1 : mapped > 4 ? 4 : mapped;
+  renderVol();
+}
+
+function focusInput(){
+  if(!running && !done){ timeInput.focus(); }
+}
+
+function onFocus(){
+  
+}
+
+function onBlur(){ commitInput(); }
+
+function onInput(el){
+  el.value = el.value.replace(/[^0-9]/g,'').slice(0,2);
+}
+
+function onKeyDown(e){
+  if(e.key==='Enter'){ commitInput(); timeInput.blur(); startTimer(); }
+  if(e.key==='ArrowUp'){ e.preventDefault(); nudge(1); }
+  if(e.key==='ArrowDown'){ e.preventDefault(); nudge(-1); }
+}
+
+function nudge(d){
+  const v = parseInt(timeInput.value)||mins;
+  timeInput.value = Math.min(59, Math.max(1, v+d));
+}
+
+function commitInput(){
+  let v = parseInt(timeInput.value);
+  if(isNaN(v)||v<1) v=1;
+  if(v>59) v=59;
+  mins = v;
+  timeInput.value = pad(mins);
+  
+}
+
+function handleLeft(){
+  if(!running && !done){
+    commitInput(); startTimer();
+  } else if(running){
+    goBlue();
+  } else if(done){
+    goBlue();
+  }
+}
+
+function startTimer(){
+  if(running) return;
+  running = true;
+  totalSecs = mins * 60;
+  remaining = totalSecs;
+
+  widget.className = 'widget state-run';
+  setDisp.style.display  = 'none';
+  runDisp.style.display  = 'flex';
+  doneDisp.style.display = 'none';
+  countText.textContent  = pad(mins)+':00';
+  playIcon.style.display  = 'none';
+  resetIcon.style.display = '';
+  
+  renderVol();
+
+  ticker = setInterval(()=>{
+    remaining--;
+    countText.textContent = pad(Math.floor(remaining/60))+':'+pad(remaining%60);
+    if(remaining <= 0){
+      clearInterval(ticker);
+      running = false; done = true;
+      widget.className = 'widget state-done';
+      setDisp.style.display  = 'none';
+      runDisp.style.display  = 'none';
+      doneDisp.style.display = 'flex';
+      playIcon.style.display  = '';
+      resetIcon.style.display = 'none';
+      renderVol();
+      playAlarm();
+    }
+  }, 1000);
+}
+
+function goBlue(){
+  clearInterval(ticker);
+  running = false; done = false;
+  widget.className = 'widget state-set';
+  setDisp.style.display  = 'flex';
+  runDisp.style.display  = 'none';
+  doneDisp.style.display = 'none';
+  timeInput.value = pad(mins);
+  playIcon.style.display  = '';
+  resetIcon.style.display = 'none';
+  stopAlarm();
+  renderVol();
+}
+
+function closeApp(){
+  clearInterval(ticker);
+  timerWrap.style.display = 'none';
+  closedMsg.style.display = 'block';
+}
+
+const alarm = new Audio("assets/sounds/telephone-ring.mp3");
+
+alarm.loop = false;
+
+function playAlarm() {
+    alarm.currentTime = 0;
+    alarm.volume = volume / 4;   // Uses your existing 1–4 volume setting
+    alarm.play();
+}
+
+function stopAlarm() {
+    alarm.pause();
+    alarm.currentTime = 0;
+}
+
+renderVol();
+</script>
